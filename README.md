@@ -18,5 +18,5 @@ Requirements
  
 License and Authors
 -------------------
-Author: https://github.com/snebel29
-License: MIT
+- Author: https://github.com/snebel29
+- License: MIT
