@@ -1,4 +1,3 @@
-rundeck-node Cookbook
 Description
 =====================
 This script creates a valid rundeck resources.xml file with all your chef nodes with the following attributes
@@ -9,9 +8,10 @@ This script creates a valid rundeck resources.xml file with all your chef nodes 
 
 Usage
 -----
+```
 chmod u+x rundeck-resources-generator-from-chef.rb
 ./rundeck-resources-generator-from-chef.rb
-
+```
 Requirements
 ------------
 - Requires a valid knife installation
