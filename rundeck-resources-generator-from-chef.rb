@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
 # Inspired on https://github.com/oswaldlabs/chef-rundeck
-# Require a valid installation of knife
 
+gem 'chef', '12.5.1'
 require 'uri'
 require 'chef'
 
@@ -31,20 +31,26 @@ class ResourcesGenerator
     def save(nodes, resource_file)
         raise ArgumentError, "Type must be an Array" unless (nodes.kind_of?(Array))
 
-        username = "rundeck"
+        username = "pedeploy"
+        saved_nodes = 0
 
         temp_resource_file = resource_file + '.tmp'
         file = File.open(temp_resource_file, 'w')
         file.puts("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<project>")
-        file.puts("<node name=\"localhost\" hostname=\"localhost\" username=\"#{username}\"/>")
+        file.puts("<node name=\"localhost\" hostname=\"localhost\" clustername=\"\" datacenter=\"\" username=\"#{username}\"/>")
 
         nodes.each do |node|
             node = node['data']
             hostname = node['name']
+
             name = hostname.split('.')[0]
+            sub_domain = hostname.split('.')[1..-1]
+            next if not sub_domain.any?
+
             chef_environment = node['chef_environment']
             ip = nil
-                
+            #tags = "vip1,vip1" We'll use tags for vips belonging
+
             if not name =~ /^localhost$/ and not hostname =~ /^localhost\.localdomain$/
                 unless node['network']['interfaces']['eth0']['addresses'].nil?
                     ip = nil
@@ -54,14 +60,23 @@ class ResourcesGenerator
                     end
                 end
 
-                file.puts("<node name=\"#{name}\" hostname=\"#{hostname}\" ip=\"#{ip.to_s}\" chef_environment=\"#{chef_environment}\" username=\"#{username}\"/>")
+                re_name = name.match(/(.*)(\d{3})(\w{3})/)
+
+                clustername = re_name[1]
+                number = re_name[2]
+                datacenter = re_name[3]
+
+                file.puts("<node name=\"#{name}\" hostname=\"#{hostname}\" clustername=\"#{clustername}\" datacenter=\"#{datacenter}\" ip=\"#{ip.to_s}\" chef_environment=\"#{chef_environment}\" username=\"#{username}\"/>")
+                saved_nodes = saved_nodes +1
             end
         end
 
         file.puts("</project>")
         file.close unless file.nil?
         File.rename(temp_resource_file, resource_file)
-        
+
+        saved_nodes
+
     end
 
     private
@@ -71,7 +86,6 @@ class ResourcesGenerator
 end
 
 # main()
-
 SCRIPT_FOLDER = File.expand_path(File.dirname(__FILE__))
 RESOURCES_FILE = File.join(SCRIPT_FOLDER, "resources.xml")
 
@@ -84,8 +98,7 @@ resources = ResourcesGenerator.new
 nodes = resources.search(:node, '*.*', QUERY_STRING, NODE_ATTRIBUTES)
 puts "Got #{nodes.length} nodes"
 
-resources.save(nodes, RESOURCES_FILE)
-puts "Saved to file #{RESOURCES_FILE}"
+saved_nodes = resources.save(nodes, RESOURCES_FILE)
+puts "Saved #{saved_nodes} nodes to file #{RESOURCES_FILE}"
 
 exit 0
-
